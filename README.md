@@ -5,7 +5,7 @@ A **Claude Code** skill for querying any Fandom wiki via MediaWiki API. Fetch pa
 ## Quick Start
 
 ```bash
-git clone https://github.com/kjx-talesofai/fandom-cli.git
+git clone https://github.com/kjx-talesofai/claude-skill-fandom-cli.git
 cd fandom-cli
 
 # Install dependencies (Python 3.10+)
