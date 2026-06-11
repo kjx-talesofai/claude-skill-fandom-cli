@@ -24,34 +24,34 @@ Requires Python 3.10+.
 
 ```bash
 # Fetch a page as Markdown
-fandom dontstarve page Wilson --format markdown
+fandom page dontstarve Wilson --format markdown
 
 # Extract structured infobox data
-fandom dontstarve infobox Wilson
+fandom infobox dontstarve Wilson
 
 # List pages in a category
-fandom dontstarve category Characters --limit 20
+fandom category dontstarve Characters --limit 20
 
 # Search pages
-fandom dontstarve search "shadow weapon" --limit 10
+fandom search dontstarve "shadow weapon" --limit 10
 
 # Get page images (filtered to entity-related)
-fandom dontstarve images Wilson --entity-match --limit 5
+fandom images dontstarve Wilson --entity-match --limit 5
 
 # Get page metadata
-fandom dontstarve metadata Wilson
+fandom metadata dontstarve Wilson
 ```
 
 ## Commands
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `page` | Fetch page content | `fandom <wiki> page <title> --format markdown\|json\|text` |
-| `infobox` | Extract structured infobox | `fandom <wiki> infobox <title>` |
-| `category` | List pages in a category | `fandom <wiki> category <name> --limit N --offset TOKEN` |
-| `search` | Search pages by query | `fandom <wiki> search <query> --limit N` |
-| `images` | Extract images from a page | `fandom <wiki> images <title> --entity-match --limit N` |
-| `metadata` | Get page metadata | `fandom <wiki> metadata <title>` |
+| `page` | Fetch page content | `fandom page <wiki> <title> --format markdown\|json\|text` |
+| `infobox` | Extract structured infobox | `fandom infobox <wiki> <title>` |
+| `category` | List pages in a category | `fandom category <wiki> <name> --limit N --offset TOKEN` |
+| `search` | Search pages by query | `fandom search <wiki> <query> --limit N` |
+| `images` | Extract images from a page | `fandom images <wiki> <title> --entity-match --limit N` |
+| `metadata` | Get page metadata | `fandom metadata <wiki> <title>` |
 
 ## Output Formats
 

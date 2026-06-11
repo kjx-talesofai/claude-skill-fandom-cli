@@ -33,12 +33,12 @@ When unclear, ask the user: "Which Fandom wiki? (e.g. dontstarve, harrypotter, r
 
 | User intent | Command |
 |-------------|---------|
-| Read page content | `fandom <wiki> page <title> --format markdown` |
-| Get structured data (stats, attributes) | `fandom <wiki> infobox <title>` |
-| Discover pages by type | `fandom <wiki> category <name> --limit N` |
-| Search for a topic | `fandom <wiki> search <query> --limit N` |
-| Get page images | `fandom <wiki> images <title> --entity-match --limit N` |
-| Get page metadata | `fandom <wiki> metadata <title>` |
+| Read page content | `fandom page <wiki> <title> --format markdown` |
+| Get structured data (stats, attributes) | `fandom infobox <wiki> <title>` |
+| Discover pages by type | `fandom category <wiki> <name> --limit N` |
+| Search for a topic | `fandom search <wiki> <query> --limit N` |
+| Get page images | `fandom images <wiki> <title> --entity-match --limit N` |
+| Get page metadata | `fandom metadata <wiki> <title>` |
 
 ### 3. Handle output
 
@@ -55,8 +55,8 @@ When unclear, ask the user: "Which Fandom wiki? (e.g. dontstarve, harrypotter, r
 
 | Error | Cause | Action |
 |-------|-------|--------|
-| "Page not found" | Title doesn't exist | Try search: `fandom <wiki> search <partial title>` |
-| "No infobox found" | Page lacks portable-infobox | Fall back to `page --format markdown` |
+| "Page not found" | Title doesn't exist | Try search: `fandom search <wiki> <partial title>` |
+| "No infobox found" | Page lacks portable-infobox | Fall back to `fandom page <wiki> <title> --format markdown` |
 | Empty category | Category has no direct pages (only subcats) | Try broader category or search |
 | API Error [429] | Rate limited | Wait and retry (CLI auto-retries 3x) |
 | Empty search | No matches | Broaden query or check wiki subdomain |
