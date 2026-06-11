@@ -1,6 +1,6 @@
 ---
 name: fandom-cli
-description: "Query Fandom wikis via MediaWiki API. Triggers: fandom wiki, wiki page, get wiki content, search wiki, wiki infobox, fandom character. Use when the user asks about game characters, items, lore, or any content from a Fandom-hosted wiki."
+description: "Query Fandom wikis via MediaWiki API. Triggers: fandom, wiki page, infobox, search."
 ---
 
 # Fandom CLI
