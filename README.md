@@ -8,13 +8,36 @@ without scraping HTML or fighting Cloudflare.
 
 ```bash
 git clone https://github.com/kjx-talesofai/claude-skill-fandom-cli.git
-cd fandom-cli
+cd claude-skill-fandom-cli
 
 # Install dependencies (Python 3.10+)
 pip install typer httpx beautifulsoup4 markdownify
 
-# Run
+# Run directly as a Python module (always works)
 python -m fandom_cli.cli page dontstarve Wilson --format markdown
+```
+
+### Convenience wrapper (optional, one-time)
+
+To use the shorter `fandom` command without typing `python -m fandom_cli.cli`:
+
+```bash
+# In Cohub / workspace:
+cat > /workspace/bin/fandom << 'EOF'
+#!/bin/bash
+cd "$(dirname "$(readlink -f "$0")")/../.agents/skills/fandom-cli" && exec python3 -m fandom_cli.cli "$@"
+EOF
+chmod +x /workspace/bin/fandom
+
+# Or symlink the module invocation:
+# echo '#!/bin/bash' > /workspace/bin/fandom
+# echo 'exec python3 -m fandom_cli.cli "$@"' >> /workspace/bin/fandom
+# chmod +x /workspace/bin/fandom
+```
+
+Then use anywhere:
+```bash
+fandom search genshin-impact Zhongli --limit 5
 ```
 
 ## Cloudflare fallback

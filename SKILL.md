@@ -9,11 +9,10 @@ Query any Fandom wiki via MediaWiki API. Fetches pages, infoboxes, categories, s
 
 ## Preconditions
 
-1. **fandom-cli installed** — `fandom --version` should succeed
+1. **fandom CLI available** — try `fandom --help` first; if not found, use `python -m fandom_cli.cli` directly.
+   The CLI is a Python module and does **not** require `pip install`. If dependencies are missing, see README.md.
 2. **Internet connectivity** — Fandom's `api.php` endpoint must be reachable
 3. **Cloudflare fallback configured** — set `FANDOM_PROXY_URL` if you expect blocked requests
-
-If not installed, direct user to README.md for install and setup instructions.
 
 ## Rate Limiting
 
@@ -41,6 +40,9 @@ When unclear, ask the user: "Which Fandom wiki? (e.g. dontstarve, harrypotter, r
 | Get page images | `fandom images <wiki> <title> --entity-match --limit N` |
 | Get page metadata | `fandom metadata <wiki> <title>` |
 
+> **Note:** If the `fandom` command is unavailable, replace `fandom` with `python -m fandom_cli.cli`.
+> See README.md for creating a PATH wrapper on first use.
+
 ### 3. Handle output
 
 - **`page --format markdown`**: Return raw markdown to user (best for reading)
@@ -64,6 +66,7 @@ When unclear, ask the user: "Which Fandom wiki? (e.g. dontstarve, harrypotter, r
 
 ## Constraints
 
+- **Invocation**: Prefer `fandom` command. If not found, use `python -m fandom_cli.cli` from the skill directory.
 - **Always use kebab-case wiki names**: `dontstarve` not `Don't Starve`
 - **Quote titles with spaces**: `fandom page dontstarve "Dark Sword"`
 - **Page titles are case-sensitive** in the URL but MediaWiki is usually forgiving
