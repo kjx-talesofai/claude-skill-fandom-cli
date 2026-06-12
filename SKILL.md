@@ -11,8 +11,9 @@ Query any Fandom wiki via MediaWiki API. Fetches pages, infoboxes, categories, s
 
 1. **fandom-cli installed** — `fandom --version` should succeed
 2. **Internet connectivity** — Fandom's `api.php` endpoint must be reachable
+3. **Cloudflare fallback configured** — set `FANDOM_PROXY_URL` if you expect blocked requests
 
-If not installed, direct user to README.md for pip install instructions.
+If not installed, direct user to README.md for install and setup instructions.
 
 ## Rate Limiting
 
@@ -79,9 +80,18 @@ This tool relies on Fandom's free API. When using it:
 - Respect the 1 req/s limit (enforced)
 - If a wiki blocks API access, stop and notify user
 
+## Local cache
+
+Successful API responses are cached on disk for 24 hours by default. Set `FANDOM_CACHE_TTL_SECONDS=0` to disable. See README.md for configuration details.
+
 ## Fallback
 
-If `fandom-cli` fails or is unavailable:
-1. Check if `pip install fandom-cli` resolves it
-2. For simple lookups, suggest visiting the wiki directly: `https://{wiki}.fandom.com/wiki/{title}`
-3. For structured data, note that infobox formats vary by wiki and may need manual inspection
+If `fandom-cli` hits Cloudflare protection, it will first try the serverless proxy configured by `FANDOM_PROXY_URL`.
+
+See `reference/DENO_DEPLOY.md` for Deno registration, deployment steps, and proxy code.
+
+If `FANDOM_PROXY_URL` is missing or unavailable:
+1. Check whether the proxy URL is configured correctly
+2. Try again later if the request is rate limited or temporarily blocked
+3. For simple lookups, suggest visiting the wiki directly: `https://{wiki}.fandom.com/wiki/{title}`
+4. For structured data, note that infobox formats vary by wiki and may need manual inspection
