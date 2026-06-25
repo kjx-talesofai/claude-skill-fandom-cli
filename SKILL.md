@@ -9,8 +9,29 @@ Query any Fandom wiki via MediaWiki API. Fetches pages, infoboxes, categories, s
 
 ## Preconditions
 
-1. **fandom CLI available** — try `fandom --help` first; if not found, use `python -m fandom_cli.cli` directly.
-   The CLI is a Python module and does **not** require `pip install`. If dependencies are missing, see README.md.
+1. **fandom CLI available** — try commands in this order:
+   ```bash
+   fandom --help                          # if installed via pip / PATH wrapper
+   python -m fandom_cli --help            # if module is in PYTHONPATH
+   python -m fandom_cli.cli --help        # fallback: run from skill directory
+   ```
+   The CLI is a Python module. If none of the above work, set up the module:
+   ```bash
+   # Quick: add to PYTHONPATH
+   export PYTHONPATH="$HOME/.agents/skills/fandom-cli:$PYTHONPATH"
+   # Or: install the package
+   cd ~/.agents/skills/fandom-cli && pip install -e . --break-system-packages
+   # Or: create a PATH wrapper
+   mkdir -p /workspace/bin
+   cat > /workspace/bin/fandom << 'SCRIPT'
+   #!/bin/bash
+   SKILL_DIR="/workspace/.agents/skills/fandom-cli"
+   [ -d "$SKILL_DIR" ] || SKILL_DIR="$(dirname "$(readlink -f "$0")")/../.agents/skills/fandom-cli"
+   cd "$SKILL_DIR" && exec python3 -m fandom_cli.cli "$@"
+   SCRIPT
+   chmod +x /workspace/bin/fandom
+   ```
+   If dependencies are missing, see README.md.
 2. **Internet connectivity** — Fandom's `api.php` endpoint must be reachable
 3. **Cloudflare fallback configured** — set `FANDOM_PROXY_URL` if you expect blocked requests
 
@@ -40,8 +61,10 @@ When unclear, ask the user: "Which Fandom wiki? (e.g. dontstarve, harrypotter, r
 | Get page images | `fandom images <wiki> <title> --entity-match --limit N` |
 | Get page metadata | `fandom metadata <wiki> <title>` |
 
-> **Note:** If the `fandom` command is unavailable, replace `fandom` with `python -m fandom_cli.cli`.
-> See README.md for creating a PATH wrapper on first use.
+> **Note:** If the `fandom` command is unavailable, try in this order:
+> 1. `python -m fandom_cli <subcommand>` (if module in PYTHONPATH)
+> 2. `python -m fandom_cli.cli <subcommand>` (from skill directory)
+> See README.md for installation options.
 
 ### 3. Handle output
 
@@ -66,7 +89,7 @@ When unclear, ask the user: "Which Fandom wiki? (e.g. dontstarve, harrypotter, r
 
 ## Constraints
 
-- **Invocation**: Prefer `fandom` command. If not found, use `python -m fandom_cli.cli` from the skill directory.
+- **Invocation**: Try `fandom` first. Fallback cascade: `python -m fandom_cli` → `python -m fandom_cli.cli` (from skill dir).
 - **Always use kebab-case wiki names**: `dontstarve` not `Don't Starve`
 - **Quote titles with spaces**: `fandom page dontstarve "Dark Sword"`
 - **Page titles are case-sensitive** in the URL but MediaWiki is usually forgiving
@@ -87,7 +110,26 @@ This tool relies on Fandom's free API. When using it:
 
 Successful API responses are cached on disk for 24 hours by default. Set `FANDOM_CACHE_TTL_SECONDS=0` to disable. See README.md for configuration details.
 
-## Fallback
+## Installation Troubleshooting
+
+### "ModuleNotFoundError: No module named 'fandom_cli'"
+
+The module isn't in Python's search path. Fix:
+```bash
+# Option A: Add to PYTHONPATH (immediate, no pip)
+export PYTHONPATH="/path/to/fandom-cli:$PYTHONPATH"
+
+# Option B: Install the package
+cd /path/to/fandom-cli && pip install -e . --break-system-packages
+
+# Option C: Run from the skill directory
+cd /path/to/fandom-cli && python -m fandom_cli.cli ...
+```
+
+### "externally-managed-environment"
+Use `--break-system-packages` with pip, or use PYTHONPATH approach (Option A above).
+
+## Cloudflare Fallback
 
 If `fandom-cli` hits Cloudflare protection, it will first try the serverless proxy configured by `FANDOM_PROXY_URL`.
 

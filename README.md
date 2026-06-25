@@ -17,27 +17,76 @@ pip install typer httpx beautifulsoup4 markdownify
 python -m fandom_cli.cli page dontstarve Wilson --format markdown
 ```
 
-### Convenience wrapper (optional, one-time)
+## Installation Methods
+
+### Method 1: `pip install -e .` (recommended, requires editable install)
+
+```bash
+cd claude-skill-fandom-cli
+pip install -e .
+```
+
+After this, the `fandom` command is globally available, and `python -m fandom_cli` works
+from any directory:
+
+```bash
+fandom search genshin-impact Zhongli --limit 5
+python -m fandom_cli page dontstarve Wilson --format markdown
+```
+
+### Method 2: PYTHONPATH (no pip install needed)
+
+```bash
+export PYTHONPATH="/path/to/claude-skill-fandom-cli:$PYTHONPATH"
+python -m fandom_cli page dontstarve Wilson --format markdown
+```
+
+### Method 3: In-skill execution (always works, even without PYTHONPATH)
+
+```bash
+cd /path/to/claude-skill-fandom-cli
+python -m fandom_cli.cli page dontstarve Wilson --format markdown
+# or the shorter form:
+python -m fandom_cli page dontstarve Wilson --format markdown
+```
+
+### Method 4: Cohub workspace wrapper (one-time)
 
 To use the shorter `fandom` command without typing `python -m fandom_cli.cli`:
 
 ```bash
-# In Cohub / workspace:
-cat > /workspace/bin/fandom << 'EOF'
+cat > /workspace/bin/fandom << 'SCRIPT'
 #!/bin/bash
-cd "$(dirname "$(readlink -f "$0")")/../.agents/skills/fandom-cli" && exec python3 -m fandom_cli.cli "$@"
-EOF
+# Resolve the skill directory relative to this script, or use hard-coded path
+SKILL_DIR="$(cd "$(dirname "$0")/.." && pwd)/.agents/skills/fandom-cli"
+if [ ! -d "$SKILL_DIR" ]; then
+    SKILL_DIR="/workspace/.agents/skills/fandom-cli"
+fi
+cd "$SKILL_DIR" && exec python3 -m fandom_cli.cli "$@"
+SCRIPT
 chmod +x /workspace/bin/fandom
-
-# Or symlink the module invocation:
-# echo '#!/bin/bash' > /workspace/bin/fandom
-# echo 'exec python3 -m fandom_cli.cli "$@"' >> /workspace/bin/fandom
-# chmod +x /workspace/bin/fandom
 ```
 
 Then use anywhere:
 ```bash
 fandom search genshin-impact Zhongli --limit 5
+```
+
+### Externally-managed Python (Debian/Ubuntu)
+
+If you see `error: externally-managed-environment`, either:
+
+```bash
+# Option A: Install with --break-system-packages
+pip install -e . --break-system-packages
+
+# Option B: Use PYTHONPATH (no pip install needed)
+export PYTHONPATH="$(pwd):$PYTHONPATH"
+
+# Option C: Create a venv
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
 ```
 
 ## Cloudflare fallback
