@@ -13,20 +13,20 @@ cd claude-skill-fandom-cli
 # Install dependencies (Python 3.10+)
 pip install typer httpx beautifulsoup4 markdownify
 
-# Run directly as a Python module (always works)
-python -m fandom_cli.cli page dontstarve Wilson --format markdown
+# Run directly as a Python module (always works from the skill directory)
+python -m fandom_cli page dontstarve Wilson --format markdown
 ```
 
-## Installation Methods
+## Installation (choose one)
 
-### Method 1: `pip install -e .` (recommended, requires editable install)
+### 🥇 `pip install -e .` — recommended, works everywhere
 
 ```bash
 cd claude-skill-fandom-cli
 pip install -e .
 ```
 
-After this, the `fandom` command is globally available, and `python -m fandom_cli` works
+After this, the `fandom` command is globally available, and `python -m fandom_cli` runs
 from any directory:
 
 ```bash
@@ -34,60 +34,52 @@ fandom search genshin-impact Zhongli --limit 5
 python -m fandom_cli page dontstarve Wilson --format markdown
 ```
 
-### Method 2: PYTHONPATH (no pip install needed)
+### 🥈 PYTHONPATH — lightweight, no pip install required
 
 ```bash
 export PYTHONPATH="/path/to/claude-skill-fandom-cli:$PYTHONPATH"
 python -m fandom_cli page dontstarve Wilson --format markdown
 ```
 
-### Method 3: In-skill execution (always works, even without PYTHONPATH)
+### 🥉 Run from skill directory — zero config, always works
 
 ```bash
 cd /path/to/claude-skill-fandom-cli
-python -m fandom_cli.cli page dontstarve Wilson --format markdown
-# or the shorter form:
 python -m fandom_cli page dontstarve Wilson --format markdown
 ```
 
-### Method 4: Cohub workspace wrapper (one-time)
+### Externally-managed Python (Debian/Ubuntu)
 
-To use the shorter `fandom` command without typing `python -m fandom_cli.cli`:
+If you see `error: externally-managed-environment`:
+
+```bash
+# Option A: pip with override
+pip install -e . --break-system-packages
+
+# Option B: use PYTHONPATH instead (no pip at all)
+export PYTHONPATH="$(pwd):$PYTHONPATH"
+
+# Option C: create a venv
+python3 -m venv .venv && source .venv/bin/activate && pip install -e .
+```
+
+### Cohub-specific: PATH wrapper
+
+Inside a Cohub sandbox, you can create a shorthand `fandom` command:
 
 ```bash
 cat > /workspace/bin/fandom << 'SCRIPT'
 #!/bin/bash
-# Resolve the skill directory relative to this script, or use hard-coded path
-SKILL_DIR="$(cd "$(dirname "$0")/.." && pwd)/.agents/skills/fandom-cli"
-if [ ! -d "$SKILL_DIR" ]; then
-    SKILL_DIR="/workspace/.agents/skills/fandom-cli"
-fi
+SKILL_DIR="/workspace/.agents/skills/fandom-cli"
 cd "$SKILL_DIR" && exec python3 -m fandom_cli.cli "$@"
 SCRIPT
 chmod +x /workspace/bin/fandom
 ```
 
-Then use anywhere:
-```bash
-fandom search genshin-impact Zhongli --limit 5
-```
+Then `fandom search dontstarve Wilson` works from anywhere in the sandbox.
 
-### Externally-managed Python (Debian/Ubuntu)
-
-If you see `error: externally-managed-environment`, either:
-
-```bash
-# Option A: Install with --break-system-packages
-pip install -e . --break-system-packages
-
-# Option B: Use PYTHONPATH (no pip install needed)
-export PYTHONPATH="$(pwd):$PYTHONPATH"
-
-# Option C: Create a venv
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
-```
+> **Note:** This wrapper only works in Cohub sandboxes where `/workspace/.agents/skills/`
+> is the standard skill directory. For local environments, use `pip install -e .` instead.
 
 ## Cloudflare fallback
 

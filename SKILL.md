@@ -11,23 +11,22 @@ Query any Fandom wiki via MediaWiki API. Fetches pages, infoboxes, categories, s
 
 1. **fandom CLI available** — try commands in this order:
    ```bash
-   fandom --help                          # if installed via pip / PATH wrapper
-   python -m fandom_cli --help            # if module is in PYTHONPATH
-   python -m fandom_cli.cli --help        # fallback: run from skill directory
+   fandom --help                          # installed via pip install -e .
+   python -m fandom_cli --help            # module in PYTHONPATH or pip-installed
+   python -m fandom_cli.cli --help        # fallback: cd to skill directory first
    ```
-   The CLI is a Python module. If none of the above work, set up the module:
+   If none of the above work, set up the module:
    ```bash
-   # Quick: add to PYTHONPATH
-   export PYTHONPATH="$HOME/.agents/skills/fandom-cli:$PYTHONPATH"
-   # Or: install the package
-   cd ~/.agents/skills/fandom-cli && pip install -e . --break-system-packages
-   # Or: create a PATH wrapper
-   mkdir -p /workspace/bin
+   # Recommended: pip install (works on any machine)
+   cd /path/to/fandom-cli && pip install -e . --break-system-packages
+
+   # Lightweight: add to PYTHONPATH (no pip needed)
+   export PYTHONPATH="/path/to/fandom-cli:$PYTHONPATH"
+
+   # Cohub sandbox only: create a PATH wrapper
    cat > /workspace/bin/fandom << 'SCRIPT'
    #!/bin/bash
-   SKILL_DIR="/workspace/.agents/skills/fandom-cli"
-   [ -d "$SKILL_DIR" ] || SKILL_DIR="$(dirname "$(readlink -f "$0")")/../.agents/skills/fandom-cli"
-   cd "$SKILL_DIR" && exec python3 -m fandom_cli.cli "$@"
+   cd /workspace/.agents/skills/fandom-cli && exec python3 -m fandom_cli.cli "$@"
    SCRIPT
    chmod +x /workspace/bin/fandom
    ```
@@ -61,10 +60,9 @@ When unclear, ask the user: "Which Fandom wiki? (e.g. dontstarve, harrypotter, r
 | Get page images | `fandom images <wiki> <title> --entity-match --limit N` |
 | Get page metadata | `fandom metadata <wiki> <title>` |
 
-> **Note:** If the `fandom` command is unavailable, try in this order:
-> 1. `python -m fandom_cli <subcommand>` (if module in PYTHONPATH)
-> 2. `python -m fandom_cli.cli <subcommand>` (from skill directory)
-> See README.md for installation options.
+> **Note:** If the `fandom` command is unavailable, try `python -m fandom_cli` first.
+> If that also fails, `cd` to the skill directory and run `python -m fandom_cli.cli`.
+> See README.md for full installation options.
 
 ### 3. Handle output
 
@@ -116,18 +114,19 @@ Successful API responses are cached on disk for 24 hours by default. Set `FANDOM
 
 The module isn't in Python's search path. Fix:
 ```bash
-# Option A: Add to PYTHONPATH (immediate, no pip)
-export PYTHONPATH="/path/to/fandom-cli:$PYTHONPATH"
-
-# Option B: Install the package
+# Option A: pip install (works on any machine)
 cd /path/to/fandom-cli && pip install -e . --break-system-packages
 
-# Option C: Run from the skill directory
+# Option B: add to PYTHONPATH (no pip needed)
+export PYTHONPATH="/path/to/fandom-cli:$PYTHONPATH"
+
+# Option C: run from the skill directory (zero config)
 cd /path/to/fandom-cli && python -m fandom_cli.cli ...
 ```
 
 ### "externally-managed-environment"
-Use `--break-system-packages` with pip, or use PYTHONPATH approach (Option A above).
+
+Use `--break-system-packages` with pip, or use PYTHONPATH (Option B above).
 
 ## Cloudflare Fallback
 
