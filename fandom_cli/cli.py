@@ -16,7 +16,7 @@ from fandom_cli.utils import RateLimiter
 
 app = typer.Typer(
     name="fandom",
-    help="Query any Fandom wiki via MediaWiki API.",
+    help="Query Fandom and other MediaWiki wikis via API.",
     no_args_is_help=True,
 )
 
@@ -36,7 +36,7 @@ def _handle_api_error(data: dict[str, Any]) -> None:
 
 @app.command()
 def page(
-    wiki: Annotated[str, typer.Argument(help="Wiki subdomain, e.g. 'dontstarve'")],
+    wiki: Annotated[str, typer.Argument(help="Wiki: Fandom subdomain (e.g. 'dontstarve'), non-Fandom host (e.g. '1d6chan.miraheze.org'), or full API base URL")],
     title: Annotated[str, typer.Argument(help="Page title, e.g. 'Wilson'")],
     format: Annotated[
         str,
@@ -79,7 +79,7 @@ def page(
 
 @app.command()
 def infobox(
-    wiki: Annotated[str, typer.Argument(help="Wiki subdomain, e.g. 'dontstarve'")],
+    wiki: Annotated[str, typer.Argument(help="Wiki: Fandom subdomain (e.g. 'dontstarve'), non-Fandom host (e.g. '1d6chan.miraheze.org'), or full API base URL")],
     title: Annotated[str, typer.Argument(help="Page title, e.g. 'Wilson'")],
 ) -> None:
     """Extract structured infobox data from a page."""
@@ -98,7 +98,7 @@ def infobox(
 
 @app.command()
 def category(
-    wiki: Annotated[str, typer.Argument(help="Wiki subdomain, e.g. 'dontstarve'")],
+    wiki: Annotated[str, typer.Argument(help="Wiki: Fandom subdomain (e.g. 'dontstarve'), non-Fandom host (e.g. '1d6chan.miraheze.org'), or full API base URL")],
     name: Annotated[str, typer.Argument(help="Category name, e.g. 'Characters'")],
     limit: Annotated[
         int,
@@ -142,7 +142,7 @@ def category(
 
 @app.command()
 def search(
-    wiki: Annotated[str, typer.Argument(help="Wiki subdomain, e.g. 'dontstarve'")],
+    wiki: Annotated[str, typer.Argument(help="Wiki: Fandom subdomain (e.g. 'dontstarve'), non-Fandom host (e.g. '1d6chan.miraheze.org'), or full API base URL")],
     query: Annotated[str, typer.Argument(help="Search query")],
     limit: Annotated[
         int,
@@ -181,7 +181,7 @@ def search(
 
 @app.command()
 def images(
-    wiki: Annotated[str, typer.Argument(help="Wiki subdomain, e.g. 'dontstarve'")],
+    wiki: Annotated[str, typer.Argument(help="Wiki: Fandom subdomain (e.g. 'dontstarve'), non-Fandom host (e.g. '1d6chan.miraheze.org'), or full API base URL")],
     title: Annotated[str, typer.Argument(help="Page title, e.g. 'Wilson'")],
     entity_match: Annotated[
         bool,
@@ -214,7 +214,7 @@ def images(
 
 @app.command()
 def metadata(
-    wiki: Annotated[str, typer.Argument(help="Wiki subdomain, e.g. 'dontstarve'")],
+    wiki: Annotated[str, typer.Argument(help="Wiki: Fandom subdomain (e.g. 'dontstarve'), non-Fandom host (e.g. '1d6chan.miraheze.org'), or full API base URL")],
     title: Annotated[str, typer.Argument(help="Page title, e.g. 'Wilson'")],
 ) -> None:
     """Get page metadata (pageid, URL, categories)."""

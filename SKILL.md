@@ -1,11 +1,11 @@
 ---
 name: fandom-cli
-description: "Query Fandom wikis via MediaWiki API. Triggers: fandom, wiki page, infobox, search."
+description: "Query Fandom and other MediaWiki wikis via API. Triggers: fandom, wiki, mediawiki, infobox, search."
 ---
 
 # Fandom CLI
 
-Query any Fandom wiki via MediaWiki API. Fetches pages, infoboxes, categories, search results, and images.
+Query any Fandom wiki (or other MediaWiki-based wiki like Miraheze) via MediaWiki API. Fetches pages, infoboxes, categories, search results, and images.
 
 ## Preconditions
 
@@ -40,14 +40,26 @@ Query any Fandom wiki via MediaWiki API. Fetches pages, infoboxes, categories, s
 
 ## Workflow
 
-### 1. Determine the wiki subdomain
+### 1. Determine the wiki identifier
 
-Extract the wiki name from user query:
+**Fandom wikis** — use the subdomain:
 - "Don't Starve Wilson" → `dontstarve`
 - "Harry Potter character" → `harrypotter`
 - "Resident Evil Leon" → `residentevil`
 
-When unclear, ask the user: "Which Fandom wiki? (e.g. dontstarve, harrypotter, residentevil)"
+**Non-Fandom MediaWiki wikis** (e.g. Miraheze) — use the full hostname:
+- "1d6chan D&D" → `1d6chan.miraheze.org`
+- The CLI auto-detects non-Fandom hosts and uses `/w/api.php` (standard MediaWiki path)
+
+**Full URL base** — pass a complete API endpoint:
+- `https://custom.wiki/api.php`
+
+> **Important:** Non-Fandom wikis may be behind Cloudflare. Set `FANDOM_PROXY_URL`
+> to route requests through a serverless proxy. Without it, Cloudflare-protected
+> wikis will fail with 403. The proxy's `/proxy?url=` endpoint is used automatically
+> for non-Fandom hosts when Cloudflare is detected.
+
+When unclear, ask the user: "Which wiki? (Fandom subdomain or full hostname)"
 
 ### 2. Select command based on user intent
 
@@ -130,12 +142,19 @@ Use `--break-system-packages` with pip, or use PYTHONPATH (Option B above).
 
 ## Cloudflare Fallback
 
-If `fandom-cli` hits Cloudflare protection, it will first try the serverless proxy configured by `FANDOM_PROXY_URL`.
+If `fandom-cli` hits Cloudflare protection (403), it automatically retries through the
+serverless proxy configured by `FANDOM_PROXY_URL`.
+
+- **Fandom wikis**: uses proxy's `/?wikiname=...` endpoint
+- **Non-Fandom wikis** (Miraheze, etc.): uses proxy's `/proxy?url=...` generic endpoint
+
+The same `FANDOM_PROXY_URL` env var covers both cases — the CLI selects the right
+proxy format automatically.
 
 See `reference/DENO_DEPLOY.md` for Deno registration, deployment steps, and proxy code.
 
 If `FANDOM_PROXY_URL` is missing or unavailable:
 1. Check whether the proxy URL is configured correctly
 2. Try again later if the request is rate limited or temporarily blocked
-3. For simple lookups, suggest visiting the wiki directly: `https://{wiki}.fandom.com/wiki/{title}`
+3. For simple lookups, suggest visiting the wiki directly
 4. For structured data, note that infobox formats vary by wiki and may need manual inspection

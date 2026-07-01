@@ -1,6 +1,6 @@
 # Fandom CLI
 
-A **Claude Code** / **Cohub** skill for querying any Fandom wiki via MediaWiki API.
+A **Claude Code** / **Cohub** skill for querying Fandom wikis (and other MediaWiki-based wikis) via API.
 Fetch pages, extract infoboxes, search, browse categories, and collect images —
 without scraping HTML or fighting Cloudflare.
 
@@ -83,7 +83,7 @@ Then `fandom search dontstarve Wilson` works from anywhere in the sandbox.
 
 ## Cloudflare fallback
 
-When Fandom returns a Cloudflare challenge (403), the CLI automatically retries
+When a wiki returns a Cloudflare challenge (403), the CLI automatically retries
 through a serverless proxy. Set the proxy URL via environment variable:
 
 ```bash

@@ -105,8 +105,19 @@ def encode_page_title(title: str) -> str:
 
 
 def build_api_url(wiki: str, params: dict[str, Any]) -> str:
-    """Build a MediaWiki API URL for a given Fandom wiki."""
-    base = f"https://{wiki}.fandom.com/api.php"
+    """Build a MediaWiki API URL.
+
+    Supports three forms:
+    - Fandom subdomain:  ``dontstarve`` → https://dontstarve.fandom.com/api.php
+    - Non-Fandom host:   ``1d6chan.miraheze.org`` → https://1d6chan.miraheze.org/w/api.php
+    - Full URL base:     ``https://custom.wiki/api.php`` → use as-is
+    """
+    if "://" in wiki:
+        base = wiki.rstrip("/")
+    elif "." in wiki and "fandom.com" not in wiki:
+        base = f"https://{wiki}/w/api.php"
+    else:
+        base = f"https://{wiki}.fandom.com/api.php"
     query = urllib.parse.urlencode(params, doseq=True)
     return f"{base}?{query}"
 
@@ -119,12 +130,11 @@ def _is_cloudflare_block(response: httpx.Response) -> bool:
 
 
 def _fetch_via_proxy(url: str) -> dict[str, Any]:
-    """Fetch Fandom API JSON through the Deno serverless proxy."""
-    parsed = urllib.parse.urlparse(url)
-    host_parts = parsed.netloc.split(".")
-    if len(host_parts) < 3 or host_parts[-2:] != ["fandom", "com"]:
-        raise RuntimeError(f"Unsupported Fandom host: {parsed.netloc}")
+    """Fetch API JSON through the Deno serverless proxy.
 
+    For Fandom wikis, uses the wiki-specific proxy format (/?wikiname=...).
+    For all other hosts, uses the generic proxy endpoint (/proxy?url=...).
+    """
     proxy_url = DEFAULT_FANDOM_PROXY_URL
     if not proxy_url:
         raise RuntimeError(
@@ -132,9 +142,17 @@ def _fetch_via_proxy(url: str) -> dict[str, Any]:
         )
 
     proxy_url = proxy_url.rstrip("/")
-    query = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
-    query = [("wikiname", host_parts[0]), *query]
-    proxied_url = f"{proxy_url}/?{urllib.parse.urlencode(query, doseq=True)}"
+    parsed = urllib.parse.urlparse(url)
+    host_parts = parsed.netloc.split(".")
+
+    # Fandom wikis → use /?wikiname=... endpoint (legacy, keeps cache compatibility)
+    if len(host_parts) >= 3 and host_parts[-2:] == ["fandom", "com"]:
+        query = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+        query = [("wikiname", host_parts[0]), *query]
+        proxied_url = f"{proxy_url}/?{urllib.parse.urlencode(query, doseq=True)}"
+    else:
+        # Generic proxy for non-Fandom wikis (Miraheze, self-hosted, etc.)
+        proxied_url = f"{proxy_url}/proxy?url={urllib.parse.quote(url, safe='')}"
 
     with httpx.Client(timeout=45.0) as client:
         response = client.get(proxied_url, headers={"User-Agent": DEFAULT_USER_AGENT})
