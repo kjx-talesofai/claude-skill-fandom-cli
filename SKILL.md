@@ -11,26 +11,35 @@ Query any Fandom wiki (or other MediaWiki-based wiki like Miraheze) via MediaWik
 
 1. **fandom CLI available** — try commands in this order:
    ```bash
-   fandom --help                          # installed via pip install -e .
+   ~/.local/bin/fandom --help             # preferred Cohub wrapper
+   fandom --help                          # available on PATH
    python -m fandom_cli --help            # module in PYTHONPATH or pip-installed
    python -m fandom_cli.cli --help        # fallback: cd to skill directory first
    ```
-   If none of the above work, set up the module:
+   If none of the above work, install into a sandbox-local venv outside the workspace:
    ```bash
-   # Recommended: pip install (works on any machine)
-   cd /path/to/fandom-cli && pip install -e . --break-system-packages
-
-   # Lightweight: add to PYTHONPATH (no pip needed)
-   export PYTHONPATH="/path/to/fandom-cli:$PYTHONPATH"
-
-   # Cohub sandbox only: create a PATH wrapper
-   cat > /workspace/bin/fandom << 'SCRIPT'
-   #!/bin/bash
-   cd /workspace/.agents/skills/fandom-cli && exec python3 -m fandom_cli.cli "$@"
-   SCRIPT
-   chmod +x /workspace/bin/fandom
+   SKILL_DIR="/workspace/.agents/skills/fandom-cli"
+   python3 -m venv ~/venvs/fandom-cli
+   PIP_USER=false ~/venvs/fandom-cli/bin/pip install --upgrade pip
+   PIP_USER=false ~/venvs/fandom-cli/bin/pip install -e "$SKILL_DIR"
+   mkdir -p ~/.local/bin
+   ln -sf ~/venvs/fandom-cli/bin/fandom ~/.local/bin/fandom
+   export PATH="$HOME/.local/bin:$PATH"
    ```
-   If dependencies are missing, see README.md.
+   If editable install is unavailable, install dependencies and use `PYTHONPATH`:
+   ```bash
+   SKILL_DIR="/workspace/.agents/skills/fandom-cli"
+   python3 -m venv ~/venvs/fandom-cli
+   PIP_USER=false ~/venvs/fandom-cli/bin/pip install typer httpx beautifulsoup4 markdownify
+   mkdir -p ~/.local/bin
+   cat > ~/.local/bin/fandom << 'SCRIPT'
+   #!/bin/bash
+   export PYTHONPATH="/workspace/.agents/skills/fandom-cli:${PYTHONPATH:-}"
+   exec "$HOME/venvs/fandom-cli/bin/python" -m fandom_cli.cli "$@"
+   SCRIPT
+   chmod +x ~/.local/bin/fandom
+   export PATH="$HOME/.local/bin:$PATH"
+   ```
 2. **Internet connectivity** — Fandom's `api.php` endpoint must be reachable
 3. **Cloudflare fallback configured** — set `FANDOM_PROXY_URL` if you expect blocked requests
 
@@ -72,9 +81,9 @@ When unclear, ask the user: "Which wiki? (Fandom subdomain or full hostname)"
 | Get page images | `fandom images <wiki> <title> --entity-match --limit N` |
 | Get page metadata | `fandom metadata <wiki> <title>` |
 
-> **Note:** If the `fandom` command is unavailable, try `python -m fandom_cli` first.
-> If that also fails, `cd` to the skill directory and run `python -m fandom_cli.cli`.
-> See README.md for full installation options.
+> **Note:** If the `fandom` command is unavailable, try `~/.local/bin/fandom` first.
+> If that also fails, install the sandbox-local venv shown above. Do not create or
+> rely on a `.venv` inside the workspace skill directory.
 
 ### 3. Handle output
 
@@ -99,7 +108,7 @@ When unclear, ask the user: "Which wiki? (Fandom subdomain or full hostname)"
 
 ## Constraints
 
-- **Invocation**: Try `fandom` first. Fallback cascade: `python -m fandom_cli` → `python -m fandom_cli.cli` (from skill dir).
+- **Invocation**: Try `~/.local/bin/fandom` or `fandom` first. If unavailable, install the sandbox-local venv before falling back to `python -m fandom_cli`.
 - **Always use kebab-case wiki names**: `dontstarve` not `Don't Starve`
 - **Quote titles with spaces**: `fandom page dontstarve "Dark Sword"`
 - **Page titles are case-sensitive** in the URL but MediaWiki is usually forgiving
@@ -124,21 +133,22 @@ Successful API responses are cached on disk for 24 hours by default. Set `FANDOM
 
 ### "ModuleNotFoundError: No module named 'fandom_cli'"
 
-The module isn't in Python's search path. Fix:
+The module isn't in Python's search path. Fix by installing the skill into a sandbox-local venv:
 ```bash
-# Option A: pip install (works on any machine)
-cd /path/to/fandom-cli && pip install -e . --break-system-packages
-
-# Option B: add to PYTHONPATH (no pip needed)
-export PYTHONPATH="/path/to/fandom-cli:$PYTHONPATH"
-
-# Option C: run from the skill directory (zero config)
-cd /path/to/fandom-cli && python -m fandom_cli.cli ...
+SKILL_DIR="/workspace/.agents/skills/fandom-cli"
+python3 -m venv ~/venvs/fandom-cli
+PIP_USER=false ~/venvs/fandom-cli/bin/pip install --upgrade pip
+PIP_USER=false ~/venvs/fandom-cli/bin/pip install -e "$SKILL_DIR"
+mkdir -p ~/.local/bin
+ln -sf ~/venvs/fandom-cli/bin/fandom ~/.local/bin/fandom
+export PATH="$HOME/.local/bin:$PATH"
 ```
+
+If editable install is unavailable, use the PYTHONPATH wrapper from Preconditions.
 
 ### "externally-managed-environment"
 
-Use `--break-system-packages` with pip, or use PYTHONPATH (Option B above).
+Do not use system pip. Create `~/venvs/fandom-cli/` and install there with `PIP_USER=false`, or use the PYTHONPATH wrapper from Preconditions.
 
 ## Cloudflare Fallback
 

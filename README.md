@@ -10,28 +10,35 @@ without scraping HTML or fighting Cloudflare.
 git clone https://github.com/kjx-talesofai/claude-skill-fandom-cli.git
 cd claude-skill-fandom-cli
 
-# Install dependencies (Python 3.10+)
-pip install typer httpx beautifulsoup4 markdownify
+# Install into a sandbox-local venv outside the workspace (Python 3.10+)
+python3 -m venv ~/venvs/fandom-cli
+PIP_USER=false ~/venvs/fandom-cli/bin/pip install -e .
+mkdir -p ~/.local/bin
+ln -sf ~/venvs/fandom-cli/bin/fandom ~/.local/bin/fandom
+export PATH="$HOME/.local/bin:$PATH"
 
-# Run directly as a Python module (always works from the skill directory)
-python -m fandom_cli page dontstarve Wilson --format markdown
+fandom page dontstarve Wilson --format markdown
 ```
 
 ## Installation (choose one)
 
-### 🥇 `pip install -e .` — recommended, works everywhere
+### 🥇 Sandbox-local venv — recommended for Cohub
 
 ```bash
 cd claude-skill-fandom-cli
-pip install -e .
+python3 -m venv ~/venvs/fandom-cli
+PIP_USER=false ~/venvs/fandom-cli/bin/pip install --upgrade pip
+PIP_USER=false ~/venvs/fandom-cli/bin/pip install -e .
+mkdir -p ~/.local/bin
+ln -sf ~/venvs/fandom-cli/bin/fandom ~/.local/bin/fandom
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-After this, the `fandom` command is globally available, and `python -m fandom_cli` runs
-from any directory:
+After this, the `fandom` command is available through `~/.local/bin/fandom`, and `python -m fandom_cli` runs from the venv:
 
 ```bash
 fandom search genshin-impact Zhongli --limit 5
-python -m fandom_cli page dontstarve Wilson --format markdown
+~/venvs/fandom-cli/bin/python -m fandom_cli page dontstarve Wilson --format markdown
 ```
 
 ### 🥈 PYTHONPATH — lightweight, no pip install required
@@ -41,45 +48,46 @@ export PYTHONPATH="/path/to/claude-skill-fandom-cli:$PYTHONPATH"
 python -m fandom_cli page dontstarve Wilson --format markdown
 ```
 
-### 🥉 Run from skill directory — zero config, always works
+### 🥉 Run from skill directory — after dependencies are installed
 
 ```bash
 cd /path/to/claude-skill-fandom-cli
-python -m fandom_cli page dontstarve Wilson --format markdown
+~/venvs/fandom-cli/bin/python -m fandom_cli page dontstarve Wilson --format markdown
 ```
 
 ### Externally-managed Python (Debian/Ubuntu)
 
-If you see `error: externally-managed-environment`:
+If you see `error: externally-managed-environment`, do not use system pip. Create the sandbox-local venv instead:
 
 ```bash
-# Option A: pip with override
-pip install -e . --break-system-packages
+python3 -m venv ~/venvs/fandom-cli
+PIP_USER=false ~/venvs/fandom-cli/bin/pip install -e .
+```
 
-# Option B: use PYTHONPATH instead (no pip at all)
+Alternatively, install dependencies into that venv and run with `PYTHONPATH`:
+
+```bash
+PIP_USER=false ~/venvs/fandom-cli/bin/pip install typer httpx beautifulsoup4 markdownify
 export PYTHONPATH="$(pwd):$PYTHONPATH"
-
-# Option C: create a venv
-python3 -m venv .venv && source .venv/bin/activate && pip install -e .
+~/venvs/fandom-cli/bin/python -m fandom_cli page dontstarve Wilson --format markdown
 ```
 
 ### Cohub-specific: PATH wrapper
 
-Inside a Cohub sandbox, you can create a shorthand `fandom` command:
+Inside a Cohub sandbox, keep runtime dependencies outside the workspace and expose the CLI through `~/.local/bin`:
 
 ```bash
-cat > /workspace/bin/fandom << 'SCRIPT'
-#!/bin/bash
 SKILL_DIR="/workspace/.agents/skills/fandom-cli"
-cd "$SKILL_DIR" && exec python3 -m fandom_cli.cli "$@"
-SCRIPT
-chmod +x /workspace/bin/fandom
+python3 -m venv ~/venvs/fandom-cli
+PIP_USER=false ~/venvs/fandom-cli/bin/pip install -e "$SKILL_DIR"
+mkdir -p ~/.local/bin
+ln -sf ~/venvs/fandom-cli/bin/fandom ~/.local/bin/fandom
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
 Then `fandom search dontstarve Wilson` works from anywhere in the sandbox.
 
-> **Note:** This wrapper only works in Cohub sandboxes where `/workspace/.agents/skills/`
-> is the standard skill directory. For local environments, use `pip install -e .` instead.
+> **Note:** Do not create a `.venv` inside `/workspace/.agents/skills/fandom-cli`; venvs and Python binaries belong under `~/venvs/`.
 
 ## Cloudflare fallback
 
