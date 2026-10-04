@@ -1,6 +1,8 @@
 # Fandom CLI
 
-A **Claude Code** / **Cohub** skill for querying Fandom wikis (and other MediaWiki-based wikis) via API.
+**Install:** `npx skills add kjx-talesofai/claude-skill-fandom-cli -g -a cline`
+
+An agent skill for querying Fandom wikis (and other MediaWiki-based wikis) via API.
 Fetch pages, extract infoboxes, search, browse categories, and collect images —
 without scraping HTML or fighting Cloudflare.
 
