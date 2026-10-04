@@ -1,4 +1,4 @@
-"""Utilities: rate limiting, retry logic, URL helpers."""
+"""Utilities: rate limiting, retry logic, URL helpers, proxy handling."""
 
 from __future__ import annotations
 
@@ -24,6 +24,94 @@ DEFAULT_CACHE_DIR = os.getenv(
     os.path.join(Path.home(), ".cache", "fandom-cli"),
 )
 DEFAULT_CACHE_TTL_SECONDS = int(os.getenv("FANDOM_CACHE_TTL_SECONDS", "86400"))
+
+PROXY_ENV_VAR = "FANDOM_PROXY_URL"
+
+
+def get_proxy_url() -> str:
+    """Return the configured serverless proxy URL, or "" when unset.
+
+    Read on every call so callers and tests can set FANDOM_PROXY_URL after this
+    module has been imported.
+    """
+    return (os.getenv(PROXY_ENV_VAR) or DEFAULT_FANDOM_PROXY_URL or "").strip()
+
+
+def _normalize_no_proxy(value: str) -> str:
+    """Return a no_proxy list httpx can parse.
+
+    Some agent runtimes export the loopback bypass list with a bracketed IPv6
+    literal (``[::1]``). httpx parses every entry as a URL while building its
+    client mounts and aborts with ``InvalidURL: Invalid port: ':1]'`` before a
+    request is sent. Rewrite ``[::1]`` to its bare form; drop a bracketed entry
+    that also carries a port, since the bare form would be ambiguous.
+    """
+    entries: list[str] = []
+    seen: set[str] = set()
+
+    def add(entry: str) -> None:
+        if entry and entry not in seen:
+            seen.add(entry)
+            entries.append(entry)
+
+    for raw in value.split(","):
+        entry = raw.strip()
+        if not entry:
+            continue
+        if entry.startswith("["):
+            close = entry.find("]")
+            if close == -1:
+                continue
+            host = entry[1:close]
+            if not entry[close + 1 :]:
+                add(host)
+            continue
+        if "]" in entry:
+            continue
+        add(entry)
+    return ",".join(entries)
+
+
+def _socks_dependency_missing() -> bool:
+    """True when httpx cannot honour a SOCKS proxy (optional ``socksio`` absent)."""
+    try:
+        import socksio  # noqa: F401
+    except ImportError:
+        return True
+    return False
+
+
+def normalize_proxy_env() -> None:
+    """Make the proxy environment safe for httpx (idempotent).
+
+    Two shapes abort httpx client construction before any request is sent:
+
+    - a bracketed IPv6 entry in ``no_proxy`` (``[::1]``);
+    - a SOCKS ``ALL_PROXY`` while the optional ``socksio`` dependency is absent.
+
+    The first is rewritten, the second dropped so the http(s) proxy or a direct
+    connection carries the request instead of the process aborting.
+    """
+    for name in ("no_proxy", "NO_PROXY"):
+        value = os.environ.get(name)
+        if value and "[" in value:
+            os.environ[name] = _normalize_no_proxy(value)
+
+    if _socks_dependency_missing():
+        for name in ("ALL_PROXY", "all_proxy"):
+            value = os.environ.get(name, "")
+            if value.lower().startswith("socks"):
+                os.environ.pop(name, None)
+
+
+def new_client(**kwargs: Any) -> httpx.Client:
+    """Create an httpx client after sanitising the proxy environment."""
+    normalize_proxy_env()
+    return httpx.Client(**kwargs)
+
+
+# Sanitise once at import: every client in this module goes through new_client().
+normalize_proxy_env()
 
 
 def _cache_key(url: str) -> str:
@@ -129,19 +217,18 @@ def _is_cloudflare_block(response: httpx.Response) -> bool:
     return cf_mitigated == "challenge" or server == "cloudflare"
 
 
-def _fetch_via_proxy(url: str) -> dict[str, Any]:
+def _fetch_via_proxy(url: str, proxy_url: str | None = None) -> dict[str, Any]:
     """Fetch API JSON through the Deno serverless proxy.
 
     For Fandom wikis, uses the wiki-specific proxy format (/?wikiname=...).
     For all other hosts, uses the generic proxy endpoint (/proxy?url=...).
     """
-    proxy_url = DEFAULT_FANDOM_PROXY_URL
+    proxy_url = (proxy_url or get_proxy_url()).rstrip("/")
     if not proxy_url:
         raise RuntimeError(
-            "FANDOM_PROXY_URL is not set; Cloudflare fallback cannot be used"
+            "FANDOM_PROXY_URL is not set; proxy fallback cannot be used"
         )
 
-    proxy_url = proxy_url.rstrip("/")
     parsed = urllib.parse.urlparse(url)
     host_parts = parsed.netloc.split(".")
 
@@ -154,7 +241,7 @@ def _fetch_via_proxy(url: str) -> dict[str, Any]:
         # Generic proxy for non-Fandom wikis (Miraheze, self-hosted, etc.)
         proxied_url = f"{proxy_url}/proxy?url={urllib.parse.quote(url, safe='')}"
 
-    with httpx.Client(timeout=45.0) as client:
+    with new_client(timeout=45.0) as client:
         response = client.get(proxied_url, headers={"User-Agent": DEFAULT_USER_AGENT})
         response.raise_for_status()
         return response.json()
@@ -167,11 +254,10 @@ def fetch_json(url: str, rate_limiter: RateLimiter | None = None) -> dict[str, A
     expired (default 24 hours). Set ``FANDOM_CACHE_TTL_SECONDS`` to 0 to
     disable caching.
 
-    The CLI tries Fandom directly first. If Cloudflare returns a managed
-    challenge (403), it retries through the Deno proxy configured by
-    FANDOM_PROXY_URL.
-
-    If FANDOM_PROXY_URL is not set, the fallback raises a clear error.
+    When FANDOM_PROXY_URL is set the request goes through the Deno proxy first
+    and falls back to the wiki directly if the proxy errors. When it is unset the
+    CLI talks to the wiki directly, which may hit a Cloudflare challenge (403); a
+    detected challenge is retried through the proxy if one is available.
     """
     # --- cache hit --------------------------------------------------------
     cached = _cache_get(url)
@@ -183,37 +269,56 @@ def fetch_json(url: str, rate_limiter: RateLimiter | None = None) -> dict[str, A
         rate_limiter = RateLimiter()
 
     headers = {"User-Agent": DEFAULT_USER_AGENT}
+    proxy_url = get_proxy_url()
     result: dict[str, Any] | None = None
 
-    for attempt in range(MAX_RETRIES):
+    # --- proxy first ------------------------------------------------------
+    # Many wikis answer Cloudflare challenges on ordinary networks, so the
+    # serverless proxy is the dependable route whenever it is configured.
+    if proxy_url:
         rate_limiter.wait()
         try:
-            with httpx.Client(timeout=30.0) as client:
-                response = client.get(url, headers=headers)
-                response.raise_for_status()
-                result = response.json()
-        except httpx.HTTPStatusError as exc:
-            status = exc.response.status_code
+            result = _fetch_via_proxy(url, proxy_url)
+        except Exception as proxy_exc:
+            print(
+                f"[fandom-cli] Proxy fetch failed ({proxy_exc}); trying the wiki directly",
+                file=sys.stderr,
+            )
 
-            if status == 403 and _is_cloudflare_block(exc.response):
-                try:
-                    result = _fetch_via_proxy(url)
-                except Exception as proxy_exc:
-                    print(f"[fandom-cli] Fandom proxy failed: {proxy_exc}", file=sys.stderr)
-                if result is not None:
-                    break
+    # --- direct -----------------------------------------------------------
+    if result is None:
+        for attempt in range(MAX_RETRIES):
+            rate_limiter.wait()
+            try:
+                with new_client(timeout=30.0) as client:
+                    response = client.get(url, headers=headers)
+                    response.raise_for_status()
+                    result = response.json()
+            except httpx.HTTPStatusError as exc:
+                status = exc.response.status_code
 
-            if status == 429 and attempt < MAX_RETRIES - 1:
-                time.sleep(2 ** attempt)
-                continue
-            raise
-        except httpx.RequestError:
-            if attempt < MAX_RETRIES - 1:
-                time.sleep(2 ** attempt)
-                continue
-            raise
+                if status == 403 and _is_cloudflare_block(exc.response) and proxy_url:
+                    try:
+                        result = _fetch_via_proxy(url, proxy_url)
+                    except Exception as proxy_exc:
+                        print(
+                            f"[fandom-cli] Fandom proxy failed: {proxy_exc}",
+                            file=sys.stderr,
+                        )
+                    if result is not None:
+                        break
 
-        break
+                if status == 429 and attempt < MAX_RETRIES - 1:
+                    time.sleep(2 ** attempt)
+                    continue
+                raise
+            except httpx.RequestError:
+                if attempt < MAX_RETRIES - 1:
+                    time.sleep(2 ** attempt)
+                    continue
+                raise
+
+            break
 
     if result is None:
         raise RuntimeError("Unexpected end of retry loop")

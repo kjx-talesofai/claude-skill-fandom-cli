@@ -89,10 +89,12 @@ Then `fandom search dontstarve Wilson` works from anywhere in the sandbox.
 
 > **Note:** Do not create a `.venv` inside `/workspace/.agents/skills/fandom-cli`; venvs and Python binaries belong under `~/venvs/`.
 
-## Cloudflare fallback
+## Proxy
 
-When a wiki returns a Cloudflare challenge (403), the CLI automatically retries
-through a serverless proxy. Set the proxy URL via environment variable:
+When `FANDOM_PROXY_URL` is set, requests go through the serverless proxy first
+and fall back to the wiki directly if the proxy errors. When it is unset, the
+CLI queries the wiki directly — which may return a Cloudflare 403.
+Set the proxy URL via environment variable:
 
 ```bash
 export FANDOM_PROXY_URL="https://your-proxy.example.com"

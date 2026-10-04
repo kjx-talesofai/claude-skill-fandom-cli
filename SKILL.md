@@ -41,7 +41,7 @@ Query any Fandom wiki (or other MediaWiki-based wiki like Miraheze) via MediaWik
    export PATH="$HOME/.local/bin:$PATH"
    ```
 2. **Internet connectivity** — Fandom's `api.php` endpoint must be reachable
-3. **Cloudflare fallback configured** — set `FANDOM_PROXY_URL` if you expect blocked requests
+3. **Proxy configured** — set `FANDOM_PROXY_URL` to route requests through a clean IP (recommended; many wikis answer with a Cloudflare 403)
 
 ## Rate Limiting
 
@@ -150,10 +150,12 @@ If editable install is unavailable, use the PYTHONPATH wrapper from Precondition
 
 Do not use system pip. Create `~/venvs/fandom-cli/` and install there with `PIP_USER=false`, or use the PYTHONPATH wrapper from Preconditions.
 
-## Cloudflare Fallback
+## Proxy
 
-If `fandom-cli` hits Cloudflare protection (403), it automatically retries through the
-serverless proxy configured by `FANDOM_PROXY_URL`.
+`FANDOM_PROXY_URL` selects a serverless proxy that fetches from a clean IP.
+
+- **Set** → requests go through the proxy first; if the proxy fails, the CLI retries the wiki directly.
+- **Unset** → requests go straight to the wiki, which may return a Cloudflare 403.
 
 - **Fandom wikis**: uses proxy's `/?wikiname=...` endpoint
 - **Non-Fandom wikis** (Miraheze, etc.): uses proxy's `/proxy?url=...` generic endpoint
